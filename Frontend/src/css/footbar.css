@@ -1,0 +1,18 @@
+.footbar {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: #222;
+    color: white;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+  }
+  
+  .footbar a {
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+    text-align: center;
+  }
+  
