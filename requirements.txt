@@ -1,0 +1,25 @@
+# create virtual environment
+for windows:
+    python -m venv venv
+
+for mac:
+    python3 -m venv venv
+
+# activate virtual environment
+
+for windows:
+    venv\Scripts\activate
+
+for mac:
+    source venv/bin/activate
+
+
+
+# install requirements
+pip install -r requirements.txt( for python packages only)
+
+# other packages includ
+npm install
+
+
+
