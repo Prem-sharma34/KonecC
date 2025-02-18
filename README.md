@@ -29,7 +29,7 @@ The project consists of the following pages:
 1️⃣ **Phase 1**: Implement **random chat functionality** (priority).  
 2️⃣ **Phase 2**: Add **audio calls** once the chat system is stable.  
 3️⃣ **Phase 3**: Expand to **video calls** if feasible.  
-
+g
 
 ## 📝 Notes  
 - The first version focuses only on core features; advanced functionalities will be added later.  
