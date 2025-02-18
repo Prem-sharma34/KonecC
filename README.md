@@ -31,12 +31,6 @@ The project consists of the following pages:
 3️⃣ **Phase 3**: Expand to **video calls** if feasible.  
 
 
-## 🎤 Presentation Details  
-We will be presenting this project in class, highlighting:  
-✅ **The problem statement** (boredom with known friends, excitement of meeting new people).  
-✅ **Project Idea & Features** (without too much technical detail).  
-✅ **How It Works (renamed to ‘What Exactly It Is’)**  
-
 ## 📝 Notes  
 - The first version focuses only on core features; advanced functionalities will be added later.  
 - The **random chat feature will be built using Firebase** and integrated with Flask.  
