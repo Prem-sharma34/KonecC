@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
-import { collection, query, where, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, updateDoc, doc, addDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 function Notification() {
   const { currentUser } = useAuth();
@@ -25,10 +25,51 @@ function Notification() {
     }
   }, [currentUser]);
 
-  const markAsRead = async (notificationId) => {
-    await updateDoc(doc(db, 'notifications', notificationId), {
-      read: true
-    });
+  const handleFriendRequest = async (notification, accept) => {
+    try {
+      // Get request details
+      const requestRef = doc(db, 'friendRequests', notification.requestId);
+      const request = await getDoc(requestRef);
+      
+      if (accept) {
+        // Add to friends collection for both users
+        const senderRef = doc(db, 'users', request.data().from);
+        const senderDoc = await getDoc(senderRef);
+        
+        await addDoc(collection(db, 'friends'), {
+          userId: currentUser.uid,
+          friendId: request.data().from,
+          friendName: senderDoc.data().username,
+          timestamp: serverTimestamp()
+        });
+
+        await addDoc(collection(db, 'friends'), {
+          userId: request.data().from,
+          friendId: currentUser.uid,
+          friendName: currentUser.email,
+          timestamp: serverTimestamp()
+        });
+
+        // Notify sender that request was accepted
+        await addDoc(collection(db, 'notifications'), {
+          userId: request.data().from,
+          message: `${currentUser.email} accepted your friend request`,
+          type: 'friendRequestAccepted',
+          read: false,
+          timestamp: serverTimestamp()
+        });
+      }
+
+      // Delete the friend request
+      await deleteDoc(requestRef);
+      
+      // Mark notification as read
+      await updateDoc(doc(db, 'notifications', notification.id), {
+        read: true
+      });
+    } catch (error) {
+      console.error("Error handling friend request:", error);
+    }
   };
 
   return (
@@ -50,12 +91,29 @@ function Notification() {
             }}
           >
             <div style={{ marginBottom: '10px' }}>{notification.message}</div>
-            <button
-              onClick={() => markAsRead(notification.id)}
-              style={{ padding: '5px 10px' }}
-            >
-              Mark as Read
-            </button>
+            {notification.type === 'friendRequest' ? (
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => handleFriendRequest(notification, true)}
+                  style={{ padding: '5px 10px', backgroundColor: '#4CAF50', color: 'white' }}
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleFriendRequest(notification, false)}
+                  style={{ padding: '5px 10px', backgroundColor: '#f44336', color: 'white' }}
+                >
+                  Decline
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => updateDoc(doc(db, 'notifications', notification.id), { read: true })}
+                style={{ padding: '5px 10px' }}
+              >
+                Mark as Read
+              </button>
+            )}
           </div>
         ))
       )}

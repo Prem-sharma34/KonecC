@@ -59,10 +59,18 @@ function Search() {
         timestamp: serverTimestamp()
       });
 
+      const requestDoc = await addDoc(collection(db, 'friendRequests'), {
+        from: currentUser.uid,
+        to: userId,
+        status: 'pending',
+        timestamp: serverTimestamp()
+      });
+
       await addDoc(collection(db, 'notifications'), {
         userId,
         message: `${currentUser.email} sent you a friend request`,
         type: 'friendRequest',
+        requestId: requestDoc.id,
         read: false,
         timestamp: serverTimestamp()
       });
