@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot, addDoc, orderBy, serverTimestamp 
 function Messages() {
   const { currentUser } = useAuth();
   const [friends, setFriends] = useState([]);
+  const navigate = useNavigate();
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');

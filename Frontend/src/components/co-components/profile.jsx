@@ -18,6 +18,7 @@ function Profile() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [friends, setFriends] = useState([]);
+  const [showFriends, setShowFriends] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -167,8 +168,21 @@ function Profile() {
       )}
 
       <div style={{ marginTop: '30px' }}>
-        <h3>Friends</h3>
-        {friends.map(friend => (
+        <button 
+          onClick={() => setShowFriends(!showFriends)} 
+          style={{ 
+            width: '100%', 
+            padding: '10px', 
+            marginBottom: '10px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px'
+          }}
+        >
+          {showFriends ? 'Hide Friends' : 'Show Friends'}
+        </button>
+        {showFriends && friends.map(friend => (
           <div key={friend.id} style={{
             padding: '10px',
             border: '1px solid #ccc',

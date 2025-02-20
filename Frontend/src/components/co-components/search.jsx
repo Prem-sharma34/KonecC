@@ -137,12 +137,21 @@ function Search() {
           <p><strong>Name:</strong> {selectedUser.name}</p>
           <p><strong>Bio:</strong> {selectedUser.bio}</p>
           <p><strong>Gender:</strong> {selectedUser.gender}</p>
-          <button
-            onClick={() => sendFriendRequest(selectedUser.id, selectedUser.username)}
-            style={{ width: '100%', padding: '10px', marginTop: '10px' }}
-          >
-            Send Friend Request
-          </button>
+          {friendsCheck.empty ? (
+            <button
+              onClick={() => sendFriendRequest(selectedUser.id, selectedUser.username)}
+              style={{ width: '100%', padding: '10px', marginTop: '10px' }}
+            >
+              Send Friend Request
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/messages', { state: { friendId: selectedUser.id, friendName: selectedUser.username } })}
+              style={{ width: '100%', padding: '10px', marginTop: '10px', backgroundColor: '#28a745' }}
+            >
+              Message
+            </button>
+          )}
           <button
             onClick={() => setSelectedUser(null)}
             style={{ width: '100%', padding: '10px', marginTop: '10px' }}
