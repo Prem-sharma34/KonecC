@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
-import { collection, query, where, onSnapshot, addDoc, orderBy, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, orderBy, serverTimestamp, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import EmojiPicker from 'emoji-picker-react';
 
@@ -15,6 +15,15 @@ function Messages() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const messagesEndRef = React.useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     if (currentUser) {
@@ -30,7 +39,6 @@ function Messages() {
         })));
       });
 
-      // If friendId was passed through navigation
       if (location.state?.friendId) {
         const friend = {
           friendId: location.state.friendId,
@@ -45,23 +53,31 @@ function Messages() {
 
   useEffect(() => {
     if (selectedFriend) {
+      const messagesRef = collection(db, 'messages');
       const q = query(
-        collection(db, 'messages'),
+        messagesRef,
         where('users', 'array-contains', currentUser.uid),
         orderBy('timestamp', 'asc')
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const filteredMessages = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }))
-          .filter(msg => 
-            (msg.from === currentUser.uid && msg.to === selectedFriend.friendId) ||
-            (msg.from === selectedFriend.friendId && msg.to === currentUser.uid)
-          );
-        setMessages(filteredMessages);
+        const newMessages = [];
+        snapshot.docs.forEach((doc) => {
+          const messageData = doc.data();
+          if ((messageData.from === currentUser.uid && messageData.to === selectedFriend.friendId) ||
+              (messageData.from === selectedFriend.friendId && messageData.to === currentUser.uid)) {
+            newMessages.push({
+              id: doc.id,
+              ...messageData
+            });
+            
+            // Mark received messages as read
+            if (messageData.to === currentUser.uid && !messageData.read) {
+              updateDoc(doc.ref, { read: true });
+            }
+          }
+        });
+        setMessages(newMessages);
       });
 
       return () => unsubscribe();
@@ -72,14 +88,16 @@ function Messages() {
     e.preventDefault();
     if (newMessage.trim() && selectedFriend) {
       try {
-        await addDoc(collection(db, 'messages'), {
+        const messageData = {
           text: newMessage,
           from: currentUser.uid,
           to: selectedFriend.friendId,
           users: [currentUser.uid, selectedFriend.friendId],
           timestamp: serverTimestamp(),
           read: false
-        });
+        };
+        
+        await addDoc(collection(db, 'messages'), messageData);
         setNewMessage('');
         setShowEmojiPicker(false);
       } catch (error) {
@@ -142,6 +160,7 @@ function Messages() {
                   </span>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
             <div style={{ position: 'relative' }}>
               {showEmojiPicker && (
