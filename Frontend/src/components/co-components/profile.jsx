@@ -248,24 +248,45 @@ function Profile() {
               </span>
               <button 
                 onClick={async () => {
-                  // Remove friend relationship for both users
-                  const q1 = query(
-                    collection(db, 'friends'),
-                    where('userId', '==', currentUser.uid),
-                    where('friendId', '==', friend.friendId)
-                  );
-                  const q2 = query(
-                    collection(db, 'friends'),
-                    where('userId', '==', friend.friendId),
-                    where('friendId', '==', currentUser.uid)
-                  );
+                  try {
+                    // Remove friend relationship for both users
+                    const q1 = query(
+                      collection(db, 'friends'),
+                      where('userId', '==', currentUser.uid),
+                      where('friendId', '==', friend.friendId)
+                    );
+                    const q2 = query(
+                      collection(db, 'friends'),
+                      where('userId', '==', friend.friendId),
+                      where('friendId', '==', currentUser.uid)
+                    );
 
-                  const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-
-                  const batch = writeBatch(db); // Assuming writeBatch is imported
-                  snap1.docs.forEach(doc => batch.delete(doc.ref));
-                  snap2.docs.forEach(doc => batch.delete(doc.ref));
-                  await batch.commit();
+                    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+                    
+                    // Delete all messages between the users
+                    const messagesQuery = query(
+                      collection(db, 'messages'),
+                      where('users', 'array-contains', currentUser.uid)
+                    );
+                    const messagesSnap = await getDocs(messagesQuery);
+                    
+                    const batch = writeBatch(db);
+                    snap1.docs.forEach(doc => batch.delete(doc.ref));
+                    snap2.docs.forEach(doc => batch.delete(doc.ref));
+                    
+                    // Delete messages where both users are involved
+                    messagesSnap.docs.forEach(doc => {
+                      const messageData = doc.data();
+                      if (messageData.users.includes(friend.friendId)) {
+                        batch.delete(doc.ref);
+                      }
+                    });
+                    
+                    await batch.commit();
+                    setFriends(prev => prev.filter(f => f.friendId !== friend.friendId));
+                  } catch (error) {
+                    console.error("Error removing friend:", error);
+                  }
                 }}
                 style={{ 
                   padding: '5px 10px',
