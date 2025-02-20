@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, where, getDocs, updateDoc, doc } from 'firebase/firestore';
@@ -14,19 +13,22 @@ function Random() {
   const [partner, setPartner] = useState(null);
   const [isInCall, setIsInCall] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [partnerTyping, setPartnerTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
 
   const findChatPartner = async () => {
     setIsSearching(true);
-    
+
     // Look for available users
     const waitingUsersRef = collection(db, 'waitingUsers');
     const q = query(waitingUsersRef, 
       where('userId', '!=', currentUser.uid),
       where('status', '==', 'waiting')
     );
-    
+
     const querySnapshot = await getDocs(q);
-    
+
     if (querySnapshot.empty) {
       // No waiting users, add self to waiting list
       const waitingDoc = await addDoc(waitingUsersRef, {
@@ -34,7 +36,7 @@ function Random() {
         status: 'waiting',
         timestamp: serverTimestamp()
       });
-      
+
       // Listen for match
       const unsubscribe = onSnapshot(doc(db, 'waitingUsers', waitingDoc.id), async (doc) => {
         if (doc.data()?.status === 'matched') {
@@ -51,14 +53,14 @@ function Random() {
         users: [currentUser.uid, partnerDoc.data().userId],
         timestamp: serverTimestamp()
       });
-      
+
       // Update partner's waiting document
       await updateDoc(doc(db, 'waitingUsers', partnerDoc.id), {
         status: 'matched',
         chatId: chatDoc.id,
         partnerId: currentUser.uid
       });
-      
+
       setIsSearching(false);
       setChatId(chatDoc.id);
       setPartner(partnerDoc.data().userId);
@@ -94,6 +96,33 @@ function Random() {
         timestamp: serverTimestamp()
       });
       setMessage('');
+    }
+  };
+
+  useEffect(() => {
+    if (chatId) {
+      const typingRef = doc(db, 'chats', chatId);
+      return onSnapshot(typingRef, (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          setPartnerTyping(data.typing === partner);
+        }
+      });
+    }
+  }, [chatId, partner]);
+
+  const handleTyping = () => {
+    if (chatId) {
+      const typingRef = doc(db, 'chats', chatId);
+      updateDoc(typingRef, { typing: currentUser.uid });
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        updateDoc(typingRef, { typing: null });
+      }, 1000);
     }
   };
 
@@ -141,12 +170,13 @@ function Random() {
                 </span>
               </div>
             ))}
+            {partnerTyping && <div>Partner is typing...</div>}
           </div>
           <form onSubmit={handleSend} style={{ display: 'flex', gap: '10px' }}>
             <input
               type="text"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {setMessage(e.target.value); handleTyping();}}
               style={{ flex: 1, padding: '8px' }}
               placeholder="Type a message..."
             />

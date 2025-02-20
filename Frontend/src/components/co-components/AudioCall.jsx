@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
-import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc, query, where } from 'firebase/firestore';
 
 function AudioCall({ partner, onEndCall }) {
   const { currentUser } = useAuth();
@@ -16,7 +15,13 @@ function AudioCall({ partner, onEndCall }) {
 
   useEffect(() => {
     let pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
+      ]
     });
     peerConnectionRef.current = pc;
 
@@ -63,6 +68,20 @@ function AudioCall({ partner, onEndCall }) {
         });
       }
     );
+
+    // Add connection state monitoring
+    pc.onconnectionstatechange = (event) => {
+      switch(pc.connectionState) {
+        case "disconnected":
+        case "failed":
+          onEndCall();
+          break;
+        case "closed":
+          onEndCall();
+          break;
+      }
+    };
+
 
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
@@ -114,11 +133,11 @@ function AudioCall({ partner, onEndCall }) {
     }}>
       <audio ref={localAudioRef} autoPlay muted />
       <audio ref={remoteAudioRef} autoPlay />
-      
+
       <div style={{ marginBottom: '20px' }}>
         Call Duration: {formatDuration(callDuration)}
       </div>
-      
+
       <div style={{ display: 'flex', gap: '20px' }}>
         <button onClick={toggleMute} style={{ padding: '10px 20px' }}>
           {isMuted ? 'Unmute' : 'Mute'}

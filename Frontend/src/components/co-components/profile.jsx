@@ -45,8 +45,39 @@ function Profile() {
     }
   };
 
-  return (
+  const [friends, setFriends] = useState([]);
+
+useEffect(() => {
+  if (currentUser) {
+    const q = query(
+      collection(db, 'friends'),
+      where('userId', '==', currentUser.uid)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      setFriends(snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })));
+    });
+  }
+}, [currentUser]);
+
+return (
     <div style={{ maxWidth: '600px', margin: '40px auto', padding: '20px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h3>Friends List</h3>
+        {friends.map(friend => (
+          <div key={friend.id} style={{
+            padding: '10px',
+            border: '1px solid #ccc',
+            marginBottom: '10px',
+            borderRadius: '5px'
+          }}>
+            {friend.friendName}
+          </div>
+        ))}
+      </div>
       <h2>Profile</h2>
       {message && <div style={{ color: 'green', marginBottom: '10px' }}>{message}</div>}
       {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
