@@ -1,61 +1,132 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../firebase';
+import { collection, query, where, onSnapshot, addDoc, orderBy, serverTimestamp } from 'firebase/firestore';
 
 function Messages() {
+  const { currentUser } = useAuth();
+  const [friends, setFriends] = useState([]);
+  const [selectedFriend, setSelectedFriend] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+
+  useEffect(() => {
+    if (currentUser) {
+      const q = query(
+        collection(db, 'friends'),
+        where('userId', '==', currentUser.uid)
+      );
+
+      return onSnapshot(q, (snapshot) => {
+        setFriends(snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })));
+      });
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (selectedFriend) {
+      const q = query(
+        collection(db, 'messages'),
+        where('users', 'array-contains', currentUser.uid),
+        where('friendId', '==', selectedFriend.friendId),
+        orderBy('timestamp')
+      );
+
+      return onSnapshot(q, (snapshot) => {
+        setMessages(snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })));
+      });
+    }
+  }, [selectedFriend, currentUser]);
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (newMessage.trim() && selectedFriend) {
+      await addDoc(collection(db, 'messages'), {
+        text: newMessage,
+        from: currentUser.uid,
+        to: selectedFriend.friendId,
+        users: [currentUser.uid, selectedFriend.friendId],
+        timestamp: serverTimestamp(),
+        read: false
+      });
+      setNewMessage('');
+    }
+  };
+
   return (
-    <div>
-      {/* <h1>Hey</h1> */}
-      <div className="inbox">
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Prem</div>
+    <div style={{ display: 'flex', height: 'calc(100vh - 60px)' }}>
+      <div style={{ width: '300px', borderRight: '1px solid #ccc', padding: '20px' }}>
+        <h2>Friends</h2>
+        {friends.map(friend => (
+          <div
+            key={friend.id}
+            onClick={() => setSelectedFriend(friend)}
+            style={{
+              padding: '10px',
+              cursor: 'pointer',
+              background: selectedFriend?.id === friend.id ? '#e9ecef' : 'white'
+            }}
+          >
+            {friend.friendName}
           </div>
-          <div className="inbox-item-message">Hey, how are you?</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Rohit</div>
-          </div>
-          <div className="inbox-item-message">What's up?</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Surbhi</div>
-          </div>
-          <div className="inbox-item-message">Long time no see!</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Shaurya</div>
-          </div>
-          <div className="inbox-item-message">Call me back.</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Suryansh</div>
-          </div>
-          <div className="inbox-item-message">I'll be there soon.</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Viraj</div>
-          </div>
-          <div className="inbox-item-message">See you later.</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Swayam</div>
-          </div>
-          <div className="inbox-item-message">Don't forget.</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Anuj</div>
-          </div>
-          <div className="inbox-item-message">Got it.</div>
-        </div>
+        ))}
       </div>
-
-
+      
+      <div style={{ flex: 1, padding: '20px' }}>
+        {selectedFriend ? (
+          <>
+            <h2>Chat with {selectedFriend.friendName}</h2>
+            <div style={{ 
+              height: 'calc(100vh - 200px)', 
+              overflowY: 'auto',
+              border: '1px solid #ccc',
+              padding: '10px',
+              marginBottom: '20px'
+            }}>
+              {messages.map(message => (
+                <div
+                  key={message.id}
+                  style={{
+                    textAlign: message.from === currentUser.uid ? 'right' : 'left',
+                    margin: '5px'
+                  }}
+                >
+                  <span style={{
+                    background: message.from === currentUser.uid ? '#007bff' : '#e9ecef',
+                    color: message.from === currentUser.uid ? 'white' : 'black',
+                    padding: '5px 10px',
+                    borderRadius: '10px',
+                    display: 'inline-block'
+                  }}>
+                    {message.text}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <form onSubmit={sendMessage} style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                style={{ flex: 1, padding: '8px' }}
+                placeholder="Type a message..."
+              />
+              <button type="submit" style={{ padding: '8px 20px' }}>Send</button>
+            </form>
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            Select a friend to start chatting
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -24,6 +24,46 @@ function AudioCall({ partner, onEndCall }) {
       remoteAudioRef.current.srcObject = event.streams[0];
     };
 
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        addDoc(collection(db, 'calls'), {
+          type: 'candidate',
+          candidate: event.candidate.toJSON(),
+          from: currentUser.uid,
+          to: partner
+        });
+      }
+    };
+
+    // Listen for remote signals
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'calls'), 
+        where('to', '==', currentUser.uid)),
+      async (snapshot) => {
+        snapshot.docChanges().forEach(async (change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            if (data.type === 'offer') {
+              await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+              const answer = await pc.createAnswer();
+              await pc.setLocalDescription(answer);
+              await addDoc(collection(db, 'calls'), {
+                type: 'answer',
+                answer,
+                from: currentUser.uid,
+                to: partner
+              });
+            } else if (data.type === 'answer') {
+              await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            } else if (data.type === 'candidate') {
+              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+            await deleteDoc(change.doc.ref);
+          }
+        });
+      }
+    );
+
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
         stream.getTracks().forEach(track => pc.addTrack(track, stream));

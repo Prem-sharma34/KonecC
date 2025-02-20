@@ -2,8 +2,6 @@
 import React from 'react';
 
 function NotificationBadge({ count }) {
-  if (!count) return null;
-  
   return (
     <span style={{
       position: 'absolute',
@@ -14,10 +12,10 @@ function NotificationBadge({ count }) {
       borderRadius: '50%',
       padding: '2px 6px',
       fontSize: '12px',
-      minWidth: '16px',
+      minWidth: '20px',
       textAlign: 'center'
     }}>
-      {count > 99 ? '99+' : count}
+      {count}
     </span>
   );
 }
