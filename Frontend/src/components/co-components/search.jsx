@@ -31,8 +31,35 @@ function Search() {
     }
   };
 
-  const viewProfile = (user) => {
-    setSelectedUser(user);
+  const viewProfile = async (user) => {
+    try {
+      // Check if already friends
+      const friendsCheck = await getDocs(
+        query(
+          collection(db, 'friends'),
+          where('userId', '==', currentUser.uid),
+          where('friendId', '==', user.id)
+        )
+      );
+
+      // Check for pending requests
+      const requestCheck = await getDocs(
+        query(
+          collection(db, 'friendRequests'),
+          where('from', '==', currentUser.uid),
+          where('to', '==', user.id),
+          where('status', '==', 'pending')
+        )
+      );
+
+      setSelectedUser({
+        ...user,
+        isFriend: !friendsCheck.empty,
+        hasPendingRequest: !requestCheck.empty
+      });
+    } catch (err) {
+      setError('Error fetching user profile');
+    }
   };
 
   const sendFriendRequest = async (userId, username) => {
@@ -137,19 +164,26 @@ function Search() {
           <p><strong>Name:</strong> {selectedUser.name}</p>
           <p><strong>Bio:</strong> {selectedUser.bio}</p>
           <p><strong>Gender:</strong> {selectedUser.gender}</p>
-          {friendsCheck.empty ? (
+          {selectedUser.isFriend ? (
             <button
-              onClick={() => sendFriendRequest(selectedUser.id, selectedUser.username)}
-              style={{ width: '100%', padding: '10px', marginTop: '10px' }}
+              onClick={() => navigate('/messages')}
+              style={{ width: '100%', padding: '10px', marginTop: '10px', backgroundColor: '#28a745', color: 'white' }}
             >
-              Send Friend Request
+              Message
+            </button>
+          ) : selectedUser.hasPendingRequest ? (
+            <button
+              disabled
+              style={{ width: '100%', padding: '10px', marginTop: '10px', backgroundColor: '#ffc107' }}
+            >
+              Request Pending
             </button>
           ) : (
             <button
-              onClick={() => navigate('/messages', { state: { friendId: selectedUser.id, friendName: selectedUser.username } })}
-              style={{ width: '100%', padding: '10px', marginTop: '10px', backgroundColor: '#28a745' }}
+              onClick={() => sendFriendRequest(selectedUser.id, selectedUser.username)}
+              style={{ width: '100%', padding: '10px', marginTop: '10px', backgroundColor: '#007bff', color: 'white' }}
             >
-              Message
+              Send Friend Request
             </button>
           )}
           <button
