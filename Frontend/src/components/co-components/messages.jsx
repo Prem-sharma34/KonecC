@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase';
+import EmojiPicker from 'emoji-picker-react';
 import { collection, query, where, onSnapshot, addDoc, orderBy, serverTimestamp } from 'firebase/firestore';
 
 function Messages() {
@@ -11,6 +12,7 @@ function Messages() {
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -111,16 +113,35 @@ function Messages() {
                 </div>
               ))}
             </div>
-            <form onSubmit={sendMessage} style={{ display: 'flex', gap: '10px' }}>
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                style={{ flex: 1, padding: '8px' }}
-                placeholder="Type a message..."
-              />
-              <button type="submit" style={{ padding: '8px 20px' }}>Send</button>
-            </form>
+            <div style={{ position: 'relative' }}>
+              {showEmojiPicker && (
+                <div style={{ position: 'absolute', bottom: '100%', right: '0' }}>
+                  <EmojiPicker
+                    onEmojiClick={(emojiObject) => {
+                      setNewMessage(prev => prev + emojiObject.emoji);
+                      setShowEmojiPicker(false);
+                    }}
+                  />
+                </div>
+              )}
+              <form onSubmit={sendMessage} style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  style={{ flex: 1, padding: '8px' }}
+                  placeholder="Type a message..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  style={{ padding: '8px 15px' }}
+                >
+                  😊
+                </button>
+                <button type="submit" style={{ padding: '8px 20px' }}>Send</button>
+              </form>
+            </div>
           </>
         ) : (
           <div style={{ textAlign: 'center', marginTop: '20px' }}>
