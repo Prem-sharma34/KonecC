@@ -1,32 +1,78 @@
 
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../firebase';
-import { collection, addDoc, query, where, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, updateDoc, getDocs } from 'firebase/firestore';
 
 function Random() {
   const [isSearching, setIsSearching] = useState(false);
   const [isMatched, setIsMatched] = useState(false);
   const [message, setMessage] = useState('');
   const [chat, setChat] = useState([]);
+  const [chatId, setChatId] = useState(null);
+  const [partner, setPartner] = useState(null);
 
-  const startMatching = () => {
-    setIsSearching(true);
-    // Simulate matching after 2 seconds
-    setTimeout(() => {
-      setIsSearching(false);
-      setIsMatched(true);
-    }, 2000);
-  };
-
-  const sendMessage = (e) => {
-    e.preventDefault();
-    if (message.trim()) {
-      setChat([...chat, { text: message, sender: 'me' }]);
-      setMessage('');
+  useEffect(() => {
+    let unsubscribe;
+    if (chatId) {
+      const q = query(collection(db, `chats/${chatId}/messages`));
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const messages = [];
+        snapshot.forEach((doc) => {
+          messages.push({ id: doc.id, ...doc.data() });
+        });
+        setChat(messages);
+      });
     }
+    return () => unsubscribe && unsubscribe();
+  }, [chatId]);
+
+  const startMatching = async () => {
+    setIsSearching(true);
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const waitingUsersRef = collection(db, 'waitingUsers');
+    const q = query(waitingUsersRef, where('userId', '!=', userId));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const partner = snapshot.docs[0];
+      const chatRef = await addDoc(collection(db, 'chats'), {
+        users: [userId, partner.data().userId],
+        createdAt: serverTimestamp()
+      });
+      setChatId(chatRef.id);
+      setPartner(partner.data().userId);
+      setIsMatched(true);
+    } else {
+      await addDoc(waitingUsersRef, {
+        userId,
+        timestamp: serverTimestamp()
+      });
+    }
+    setIsSearching(false);
   };
 
-  const endChat = () => {
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!message.trim() || !chatId) return;
+
+    await addDoc(collection(db, `chats/${chatId}/messages`), {
+      text: message,
+      sender: auth.currentUser.uid,
+      timestamp: serverTimestamp()
+    });
+    setMessage('');
+  };
+
+  const endChat = async () => {
+    if (chatId) {
+      await updateDoc(doc(db, 'chats', chatId), {
+        ended: true
+      });
+    }
+    setChatId(null);
+    setPartner(null);
     setIsMatched(false);
     setChat([]);
   };
