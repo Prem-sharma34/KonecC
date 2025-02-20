@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -101,7 +100,7 @@ function Profile() {
       <h2>Profile</h2>
       {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
       {message && <div style={{ color: 'green', marginBottom: '10px' }}>{message}</div>}
-      
+
       {isEditing ? (
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '15px' }}>
@@ -177,9 +176,26 @@ function Profile() {
           <p><strong>Gender:</strong> {selectedUser.gender}</p>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
-              onClick={() => navigate('/messages')}
-              style={{ flex: 1, padding: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px' }}
+              onClick={() => navigate('/messages', { 
+                state: { 
+                  friendId: selectedUser.id, 
+                  friendName: selectedUser.username 
+                }
+              })}
+              style={{ 
+                flex: 1, 
+                padding: '10px', 
+                backgroundColor: '#28a745', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '5px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px'
+              }}
             >
+              <span style={{ fontSize: '20px' }}>💬</span>
               Message
             </button>
             <button
@@ -243,10 +259,10 @@ function Profile() {
                     where('userId', '==', friend.friendId),
                     where('friendId', '==', currentUser.uid)
                   );
-                  
+
                   const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-                  
-                  const batch = writeBatch(db);
+
+                  const batch = writeBatch(db); // Assuming writeBatch is imported
                   snap1.docs.forEach(doc => batch.delete(doc.ref));
                   snap2.docs.forEach(doc => batch.delete(doc.ref));
                   await batch.commit();
