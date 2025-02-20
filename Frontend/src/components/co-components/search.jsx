@@ -37,6 +37,20 @@ function Search() {
 
   const sendFriendRequest = async (userId, username) => {
     try {
+      // Check if already friends
+      const friendsCheck = await getDocs(
+        query(
+          collection(db, 'friends'),
+          where('userId', '==', currentUser.uid),
+          where('friendId', '==', userId)
+        )
+      );
+
+      if (!friendsCheck.empty) {
+        setError('Already friends with this user');
+        return;
+      }
+
       // Check if friend request already exists
       const existingRequest = await getDocs(
         query(
@@ -48,7 +62,24 @@ function Search() {
       );
 
       if (!existingRequest.empty) {
-        setError('Friend request already sent');
+        // Cancel the request
+        const requestDoc = existingRequest.docs[0];
+        await deleteDoc(doc(db, 'friendRequests', requestDoc.id));
+        
+        // Delete the notification
+        const notificationQuery = await getDocs(
+          query(
+            collection(db, 'notifications'),
+            where('type', '==', 'friendRequest'),
+            where('userId', '==', userId)
+          )
+        );
+        
+        if (!notificationQuery.empty) {
+          await deleteDoc(doc(db, 'notifications', notificationQuery.docs[0].id));
+        }
+        
+        setError('Friend request cancelled');
         return;
       }
 

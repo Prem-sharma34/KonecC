@@ -175,7 +175,41 @@ function Profile() {
             marginBottom: '10px',
             borderRadius: '5px'
           }}>
-            {friend.friendName}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {friend.friendName}
+              <button 
+                onClick={async () => {
+                  // Remove friend relationship for both users
+                  const q1 = query(
+                    collection(db, 'friends'),
+                    where('userId', '==', currentUser.uid),
+                    where('friendId', '==', friend.friendId)
+                  );
+                  const q2 = query(
+                    collection(db, 'friends'),
+                    where('userId', '==', friend.friendId),
+                    where('friendId', '==', currentUser.uid)
+                  );
+                  
+                  const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+                  
+                  const batch = writeBatch(db);
+                  snap1.docs.forEach(doc => batch.delete(doc.ref));
+                  snap2.docs.forEach(doc => batch.delete(doc.ref));
+                  await batch.commit();
+                }}
+                style={{ 
+                  padding: '5px 10px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer'
+                }}
+              >
+                Remove
+              </button>
+            </div>
           </div>
         ))}
       </div>
