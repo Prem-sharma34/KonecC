@@ -46,10 +46,25 @@ function Login() {
             required
           />
         </div>
-        <button type="submit" style={{ width: '100%', padding: '10px' }}>
+        <button type="submit" style={{ width: '100%', padding: '10px', marginBottom: '10px' }}>
           Log In
         </button>
       </form>
+      <div style={{ textAlign: 'center' }}>
+        <button 
+          onClick={() => navigate('/signup')} 
+          style={{ background: 'none', border: 'none', color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+        >
+          Need an account? Sign up
+        </button>
+        <br />
+        <button 
+          onClick={() => navigate('/reset-password')} 
+          style={{ background: 'none', border: 'none', color: 'blue', textDecoration: 'underline', cursor: 'pointer', marginTop: '5px' }}
+        >
+          Forgot Password?
+        </button>
+      </div>
     </div>
   );
 }

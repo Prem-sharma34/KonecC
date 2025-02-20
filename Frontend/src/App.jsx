@@ -4,6 +4,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from "./context/AuthContext";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
+import ResetPassword from "./components/ResetPassword";
 import Footbar from "./components/footbar.jsx";
 import Messages from "./components/co-components/messages.jsx";
 import Search from "./components/co-components/search.jsx";
@@ -24,6 +25,7 @@ function App() {
           <Routes>
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<Navigate to="/random" />} />
             <Route
               path="/search"
