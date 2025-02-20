@@ -19,6 +19,7 @@ function Profile() {
   const [message, setMessage] = useState('');
   const [friends, setFriends] = useState([]);
   const [showFriends, setShowFriends] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
     fetchProfile();
@@ -167,7 +168,30 @@ function Profile() {
         </div>
       )}
 
-      <div style={{ marginTop: '30px' }}>
+      {selectedUser ? (
+        <div style={{ marginTop: '30px', border: '1px solid #ccc', padding: '20px', borderRadius: '5px' }}>
+          <h3>Friend's Profile</h3>
+          <p><strong>Username:</strong> {selectedUser.username}</p>
+          <p><strong>Name:</strong> {selectedUser.name}</p>
+          <p><strong>Bio:</strong> {selectedUser.bio}</p>
+          <p><strong>Gender:</strong> {selectedUser.gender}</p>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => navigate('/messages')}
+              style={{ flex: 1, padding: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px' }}
+            >
+              Message
+            </button>
+            <button
+              onClick={() => setSelectedUser(null)}
+              style={{ flex: 1, padding: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '5px' }}
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginTop: '30px' }}>
         <button 
           onClick={() => setShowFriends(!showFriends)} 
           style={{ 
@@ -190,7 +214,22 @@ function Profile() {
             borderRadius: '5px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              {friend.friendName}
+              <span 
+                onClick={async () => {
+                  const userDoc = await getDoc(doc(db, 'users', friend.friendId));
+                  if (userDoc.exists()) {
+                    setSelectedUser({
+                      ...userDoc.data(),
+                      id: friend.friendId,
+                      isFriend: true
+                    });
+                    setShowFriends(false);
+                  }
+                }}
+                style={{ cursor: 'pointer', color: '#007bff' }}
+              >
+                {friend.friendName}
+              </span>
               <button 
                 onClick={async () => {
                   // Remove friend relationship for both users
@@ -227,6 +266,7 @@ function Profile() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }
