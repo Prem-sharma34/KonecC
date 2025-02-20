@@ -60,24 +60,40 @@ function Messages() {
         orderBy('timestamp', 'asc')
       );
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const newMessages = [];
-        snapshot.docs.forEach((doc) => {
-          const messageData = doc.data();
-          if ((messageData.from === currentUser.uid && messageData.to === selectedFriend.friendId) ||
-              (messageData.from === selectedFriend.friendId && messageData.to === currentUser.uid)) {
-            newMessages.push({
-              id: doc.id,
-              ...messageData
-            });
-            
-            // Mark received messages as read
-            if (messageData.to === currentUser.uid && !messageData.read) {
-              updateDoc(doc.ref, { read: true });
+      const unsubscribe = onSnapshot(q, {
+        next: (snapshot) => {
+          const newMessages = [];
+          snapshot.docChanges().forEach((change) => {
+            const messageData = change.doc.data();
+            if ((messageData.from === currentUser.uid && messageData.to === selectedFriend.friendId) ||
+                (messageData.from === selectedFriend.friendId && messageData.to === currentUser.uid)) {
+              
+              if (change.type === 'added' || change.type === 'modified') {
+                newMessages.push({
+                  id: change.doc.id,
+                  ...messageData
+                });
+              }
+              
+              // Mark received messages as read
+              if (messageData.to === currentUser.uid && !messageData.read) {
+                updateDoc(change.doc.ref, { read: true });
+              }
             }
+          });
+          
+          if (newMessages.length > 0) {
+            setMessages(prev => {
+              const messageMap = new Map([...prev, ...newMessages].map(msg => [msg.id, msg]));
+              return Array.from(messageMap.values()).sort((a, b) => 
+                (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)
+              );
+            });
           }
-        });
-        setMessages(newMessages);
+        },
+        error: (error) => {
+          console.error("Error fetching messages:", error);
+        }
       });
 
       return () => unsubscribe();
