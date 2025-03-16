@@ -1,4 +1,4 @@
-# KonecC
+# Konec
 # Random Chat + Social Media Web App  
 
 ## 📌 Overview  
