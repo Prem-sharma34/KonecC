@@ -1,4 +1,4 @@
-# KonecC
+# Konec
 # Random Chat + Social Media Web App  
 
 ## 📌 Overview  
@@ -29,13 +29,7 @@ The project consists of the following pages:
 1️⃣ **Phase 1**: Implement **random chat functionality** (priority).  
 2️⃣ **Phase 2**: Add **audio calls** once the chat system is stable.  
 3️⃣ **Phase 3**: Expand to **video calls** if feasible.  
-
-
-## 🎤 Presentation Details  
-We will be presenting this project in class, highlighting:  
-✅ **The problem statement** (boredom with known friends, excitement of meeting new people).  
-✅ **Project Idea & Features** (without too much technical detail).  
-✅ **How It Works (renamed to ‘What Exactly It Is’)**  
+g
 
 ## 📝 Notes  
 - The first version focuses only on core features; advanced functionalities will be added later.  

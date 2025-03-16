@@ -1,61 +1,243 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../firebase';
+import { collection, query, where, onSnapshot, addDoc, orderBy, serverTimestamp, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { useLocation, useNavigate } from 'react-router-dom';
+import EmojiPicker from 'emoji-picker-react';
 
 function Messages() {
+  const { currentUser } = useAuth();
+  const [friends, setFriends] = useState([]);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [selectedFriend, setSelectedFriend] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const messagesEndRef = React.useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    if (currentUser) {
+      const q = query(
+        collection(db, 'friends'),
+        where('userId', '==', currentUser.uid)
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setFriends(snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })));
+      });
+
+      if (location.state?.friendId) {
+        const friend = {
+          friendId: location.state.friendId,
+          friendName: location.state.friendName
+        };
+        setSelectedFriend(friend);
+      }
+
+      return () => unsubscribe();
+    }
+  }, [currentUser, location]);
+
+  useEffect(() => {
+    if (selectedFriend) {
+      const messagesRef = collection(db, 'messages');
+      const q = query(
+        messagesRef,
+        where('users', 'array-contains', currentUser.uid),
+        orderBy('timestamp', 'asc')
+      );
+
+      const unsubscribe = onSnapshot(q, {
+        next: (snapshot) => {
+          const newMessages = [];
+          snapshot.docChanges().forEach((change) => {
+            const messageData = change.doc.data();
+            if ((messageData.from === currentUser.uid && messageData.to === selectedFriend.friendId) ||
+                (messageData.from === selectedFriend.friendId && messageData.to === currentUser.uid)) {
+              
+              if (change.type === 'added' || change.type === 'modified') {
+                newMessages.push({
+                  id: change.doc.id,
+                  ...messageData
+                });
+              }
+              
+              // Mark received messages as read
+              if (messageData.to === currentUser.uid && !messageData.read) {
+                updateDoc(change.doc.ref, { read: true });
+              }
+            }
+          });
+          
+          if (newMessages.length > 0) {
+            setMessages(prev => {
+              const messageMap = new Map([...prev, ...newMessages].map(msg => [msg.id, msg]));
+              return Array.from(messageMap.values()).sort((a, b) => 
+                (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0)
+              );
+            });
+          }
+        },
+        error: (error) => {
+          console.error("Error fetching messages:", error);
+        }
+      });
+
+      return () => unsubscribe();
+    }
+  }, [selectedFriend, currentUser]);
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (newMessage.trim() && selectedFriend) {
+      try {
+        const messageData = {
+          text: newMessage,
+          from: currentUser.uid,
+          to: selectedFriend.friendId,
+          users: [currentUser.uid, selectedFriend.friendId],
+          timestamp: serverTimestamp(),
+          read: false
+        };
+        
+        await addDoc(collection(db, 'messages'), messageData);
+        setNewMessage('');
+        setShowEmojiPicker(false);
+      } catch (error) {
+        console.error("Error sending message:", error);
+      }
+    }
+  };
+
   return (
-    <div>
-      {/* <h1>Hey</h1> */}
-      <div className="inbox">
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Prem</div>
+    <div style={{ display: 'flex', height: 'calc(100vh - 60px)' }}>
+      <div style={{ width: '300px', borderRight: '1px solid #ccc', padding: '20px', overflowY: 'auto' }}>
+        <h2>Friends</h2>
+        {friends.map(friend => (
+          <div
+            key={friend.id}
+            onClick={() => setSelectedFriend(friend)}
+            style={{
+              padding: '10px',
+              cursor: 'pointer',
+              background: selectedFriend?.friendId === friend.friendId ? '#e9ecef' : 'white',
+              borderRadius: '5px',
+              marginBottom: '5px'
+            }}
+          >
+            {friend.friendName}
           </div>
-          <div className="inbox-item-message">Hey, how are you?</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Rohit</div>
-          </div>
-          <div className="inbox-item-message">What's up?</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Surbhi</div>
-          </div>
-          <div className="inbox-item-message">Long time no see!</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Shaurya</div>
-          </div>
-          <div className="inbox-item-message">Call me back.</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Suryansh</div>
-          </div>
-          <div className="inbox-item-message">I'll be there soon.</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Viraj</div>
-          </div>
-          <div className="inbox-item-message">See you later.</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Swayam</div>
-          </div>
-          <div className="inbox-item-message">Don't forget.</div>
-        </div>
-        <div className="inbox-item">
-          <div className="inbox-item-header">
-            <div className="inbox-item-name">Anuj</div>
-          </div>
-          <div className="inbox-item-message">Got it.</div>
-        </div>
+        ))}
       </div>
-
-
+      
+      <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column' }}>
+        {selectedFriend ? (
+          <>
+            <h2 style={{ marginBottom: '20px' }}>Chat with {selectedFriend.friendName}</h2>
+            <div style={{ 
+              flex: 1,
+              overflowY: 'auto',
+              border: '1px solid #ccc',
+              borderRadius: '5px',
+              padding: '10px',
+              marginBottom: '20px'
+            }}>
+              {messages.map(message => (
+                <div
+                  key={message.id}
+                  style={{
+                    textAlign: message.from === currentUser.uid ? 'right' : 'left',
+                    margin: '5px'
+                  }}
+                >
+                  <span style={{
+                    background: message.from === currentUser.uid ? '#007bff' : '#e9ecef',
+                    color: message.from === currentUser.uid ? 'white' : 'black',
+                    padding: '8px 15px',
+                    borderRadius: '20px',
+                    display: 'inline-block',
+                    maxWidth: '70%',
+                    wordBreak: 'break-word'
+                  }}>
+                    {message.text}
+                  </span>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+            <div style={{ position: 'relative' }}>
+              {showEmojiPicker && (
+                <div style={{ position: 'absolute', bottom: '100%', right: '0' }}>
+                  <EmojiPicker
+                    onEmojiClick={(emojiObject) => {
+                      setNewMessage(prev => prev + emojiObject.emoji);
+                      setShowEmojiPicker(false);
+                    }}
+                  />
+                </div>
+              )}
+              <form onSubmit={sendMessage} style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  style={{ 
+                    flex: 1, 
+                    padding: '10px',
+                    borderRadius: '5px',
+                    border: '1px solid #ccc'
+                  }}
+                  placeholder="Type a message..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  style={{ 
+                    padding: '8px 15px',
+                    borderRadius: '5px',
+                    border: '1px solid #ccc'
+                  }}
+                >
+                  😊
+                </button>
+                <button 
+                  type="submit" 
+                  style={{ 
+                    padding: '8px 20px',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px'
+                  }}
+                >
+                  Send
+                </button>
+              </form>
+            </div>
+          </>
+        ) : (
+          <div style={{ 
+            textAlign: 'center', 
+            marginTop: '20px',
+            color: '#666'
+          }}>
+            Select a friend to start chatting
+          </div>
+        )}
+      </div>
     </div>
   );
 }

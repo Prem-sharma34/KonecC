@@ -1,0 +1,16 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "This Project is made by a group Headed by Surbhi Rana of Btech CSE AI FT (2) of Shoolini University.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "emoji-picker-react": "^4.12.0",
+    "firebase": "^11.3.1"
+  }
+}
